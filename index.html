@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>無人商店 · 誠信小任務</title>
+<title>無人商店 · 誠信小任務｜將軍澳培智學校</title>
 <style>
 /* ============================================================
    誠信價值觀學習週 × 數學科
@@ -68,6 +68,51 @@ body{
   min-height:62px;
 }
 #topbar .title{font-size:1.05rem;font-weight:800;letter-spacing:.02em;}
+#topbar .school-chip{
+  display:flex; align-items:center; gap:8px;
+  padding:2px 10px 2px 2px; border:2px solid var(--line); border-radius:999px;
+  background:var(--bg-deep); max-width:min(280px,42vw);
+}
+#topbar .school-chip img{
+  width:32px; height:32px; object-fit:contain; border-radius:50%;
+  background:#fff; flex:0 0 auto;
+}
+#topbar .school-chip span{
+  font-size:.72rem; font-weight:800; color:var(--ink); line-height:1.15;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+/* 校徽 branding（封面／證狀） */
+.school-brand{
+  display:flex; align-items:center; justify-content:center; gap:12px;
+  flex-wrap:wrap; text-align:left; max-width:min(520px,94vw);
+}
+.school-brand img{
+  width:clamp(52px,10vw,72px); height:clamp(52px,10vw,72px);
+  object-fit:contain; border-radius:14px;
+  background:#fff; border:3px solid var(--line);
+  box-shadow:3px 3px 0 rgba(20,32,43,.12);
+  flex:0 0 auto;
+}
+.school-brand .sb-text{display:flex; flex-direction:column; gap:2px; min-width:0;}
+.school-brand .sb-name{
+  font-size:clamp(1rem,2.6vw,1.25rem); font-weight:900; color:var(--ink); line-height:1.2;
+}
+.school-brand .sb-sub{
+  font-size:clamp(.82rem,2vw,1rem); font-weight:700; color:var(--ink-soft); line-height:1.25;
+}
+#cert .school-brand{margin:0 auto 12px;}
+#cert .school-brand img{width:56px; height:56px;}
+#resultValue{
+  margin:10px 0 0; padding:10px 14px;
+  background:var(--ok-soft); border:2px solid var(--ok); border-radius:14px;
+  font-size:clamp(1rem,2.4vw,1.2rem); font-weight:800; color:var(--ok);
+  line-height:1.45; white-space:pre-line; text-align:left;
+}
+#resultValue.teach{
+  background:var(--bg-deep); border-color:var(--line); color:var(--ink);
+}
+#resultValue[hidden]{display:none !important;}
 #stars{display:flex;gap:6px;margin-left:auto;font-size:1.7rem;line-height:1;}
 #stars .s{filter:grayscale(1) opacity(.28); transition:transform .25s;}
 #stars .s.on{filter:none;}
@@ -375,6 +420,8 @@ p.hint{font-size:clamp(1rem,2.2vw,1.3rem); color:var(--ink-soft); margin:0; text
   .list-card{width:min(168px,28vw); padding:12px 8px; gap:7px;}
   .list-card .dot{font-size:clamp(1.7rem,4vw,2.2rem);}
   .lists{gap:10px;}
+  #topbar .school-chip span{display:none;}
+  #topbar .title{font-size:.92rem;}
   /* 核對畫面：zoom 精簡成淨係一個大圖，令「有／冇」按鈕同一行見到 */
   #zoom{padding:8px 12px; gap:0;}
   #zoom .zoom-cap{display:none;}
@@ -396,7 +443,12 @@ p.hint{font-size:clamp(1rem,2.2vw,1.3rem); color:var(--ink-soft); margin:0; text
 
 <div id="app">
   <div id="topbar">
-    <span class="title">無人商店 · 誠信小任務</span>
+    <div class="school-chip" title="將軍澳培智學校">
+      <img src="assets/puichi-logo.png" alt="" width="32" height="32"
+           onerror="this.onerror=null;this.src='../assets/puichi-logo.png'">
+      <span>將軍澳培智學校</span>
+    </div>
+    <span class="title">無人商店 · 誠信</span>
     <span id="progress">第 1 單 / 共 3 單</span>
     <span id="stars" aria-label="誠信星星"></span>
     <button id="teacherBtn" type="button" title="老師記錄">老師</button>
@@ -406,6 +458,14 @@ p.hint{font-size:clamp(1rem,2.2vw,1.3rem); color:var(--ink-soft); margin:0; text
 
     <!-- ── 畫面 0：封面 ───────────────────────────── -->
     <section class="screen active" id="s-cover">
+      <div class="school-brand">
+        <img src="assets/puichi-logo.png" alt="將軍澳培智學校"
+             onerror="this.onerror=null;this.src='../assets/puichi-logo.png'">
+        <div class="sb-text">
+          <div class="sb-name">將軍澳培智學校</div>
+          <div class="sb-sub">誠信價值觀學習週 · 數學科</div>
+        </div>
+      </div>
       <h2 class="screen-h">無人商店</h2>
       <p class="hint">冇人睇住，都要<strong>付足錢</strong>。<br>自己對清楚，再老實講。</p>
       <button class="big primary" id="btnStart" type="button">
@@ -501,6 +561,7 @@ p.hint{font-size:clamp(1rem,2.2vw,1.3rem); color:var(--ink-soft); margin:0; text
       <div class="card" id="resultCard">
         <h2 id="resultTitle"></h2>
         <p id="resultBody"></p>
+        <p id="resultValue" hidden></p>
         <div id="rewardStar" style="display:none;">⭐</div>
       </div>
       <button class="big primary" id="btnNext" type="button">下一張清單</button>
@@ -509,9 +570,17 @@ p.hint{font-size:clamp(1rem,2.2vw,1.3rem); color:var(--ink-soft); margin:0; text
     <!-- ── 畫面 7：證書 ───────────────────────────── -->
     <section class="screen" id="s-cert">
       <div id="cert">
-        <p class="c-sub" style="margin-bottom:4px;">誠信價值觀學習週</p>
-        <h2 class="c-title">無人商店 · 誠信小助手</h2>
-        <p class="c-sub">冇人睇住都付足錢。<br>你今日自己對清楚，再老實講。</p>
+        <div class="school-brand">
+          <img src="assets/puichi-logo.png" alt="將軍澳培智學校"
+               onerror="this.onerror=null;this.src='../assets/puichi-logo.png'">
+          <div class="sb-text">
+            <div class="sb-name">將軍澳培智學校</div>
+            <div class="sb-sub">誠信價值觀學習週 · 數學科</div>
+          </div>
+        </div>
+        <p class="c-sub" style="margin-bottom:4px;">無人商店 · 誠信小助手</p>
+        <h2 class="c-title">我識付足錢</h2>
+        <p class="c-sub">冇人睇住都照付足。<br>自己對清楚，再老實負責。</p>
         <div style="margin:18px 0;">
           <span class="c-name" id="certName">&nbsp;</span>
         </div>
@@ -1073,48 +1142,59 @@ function pay(choice){
   go("result");
 }
 
-/* 結果：兩行——貨 / 錢。標題跟付費；唔重複堆「付足」。
+/* 結果：貨／錢兩行 + 價值觀金句。
    顏色只准 --ok 或 --ink，唔准 --no 深紅。 */
 function paintResult(){
   const r = judge();
   const ans = state.declareAns;
   const choice = state.payChoice;
-  const t = $("#resultTitle"), b = $("#resultBody");
+  const t = $("#resultTitle"), b = $("#resultBody"), v = $("#resultValue");
   const d = diffSentence(r);
 
-  // 貨（一行）
+  // 貨（事實，短）
   let goods;
   if(ans==="diff" && !r.allMatch){
-    goods = "貨：你老實講唔一樣。" + d;
+    goods = "貨：你老實講——唔一樣。" + d;
   }else if(ans==="diff" && r.allMatch){
-    goods = "貨：你話唔一樣；再睇原來一樣。";
+    goods = "貨：你話唔一樣；再對原來一樣。你好小心。";
   }else if(ans==="same" && r.allMatch){
-    goods = "貨：同清單一樣。";
+    goods = "貨：同清單一樣，對得好清楚。";
   }else{
-    goods = "貨：你話一樣；再睇——" + d;
+    goods = "貨：你話一樣；再對——" + d + "下次慢慢對多次。";
   }
 
-  // 錢（一行）+ 標題
-  let money, title, face, voice;
+  // 錢 + 價值觀（主教學）
+  let money, title, face, voice, value, teach=false;
   if(choice==="full"){
-    title = "多謝你付足！";
-    money = "錢：你有付足。冇人睇住都照付，就係誠信。";
-    face = "thanks"; voice = "多謝你付足！冇人睇住都照付。";
+    title = "你有誠信！";
+    money = "錢：你付足咗。";
+    value = "無人商店冇人睇住，你都照付清。\n自己攞嘅，自己付足——呢個就係誠信。";
+    face = "thanks";
+    voice = "你有誠信！冇人睇住都照付足。";
     t.style.color = "var(--ok)";
   }else if(choice==="less"){
-    title = "要比足先得";
-    money = "錢：比少唔得。下次請付足。";
-    face = "think"; voice = "比少唔得。下次要付足。";
+    title = "記得要付足";
+    money = "錢：比少錢，未夠數。";
+    value = "少付一點，店就唔公平。\n無人商店都要付清先走。下次請付足。";
+    face = "think";
+    voice = "比少唔得。無人店要付足，先至公平。";
     t.style.color = "var(--ink)";
+    teach = true;
   }else{
-    title = "要畀錢先得";
-    money = "錢：唔比錢唔得。自己攞嘅，自己付足。";
-    face = "think"; voice = "要畀錢先得。自己攞嘅，自己付足。";
+    title = "攞咗就要付";
+    money = "錢：唔比錢就走，唔得。";
+    value = "店裏嘅貨唔係免費。\n自己攞嘅，自己付足。下次請畀錢。";
+    face = "think";
+    voice = "攞咗就要付。自己攞嘅，自己付足。";
     t.style.color = "var(--ink)";
+    teach = true;
   }
 
   t.textContent = title;
   b.textContent = goods + "\n" + money;
+  v.hidden = false;
+  v.textContent = value;
+  v.classList.toggle("teach", teach);
   say(voice, face);
 }
 
@@ -1139,6 +1219,7 @@ function startList(){
   state.basket = []; state.checks = []; state.cursor = 0;
   armDeclare(); armPay();
   $("#rewardStar").style.display = "none";
+  const rv = $("#resultValue"); if(rv){ rv.hidden = true; rv.textContent = ""; }
   renderBasket(); renderShop(); go("shop");
 }
 
