@@ -314,7 +314,7 @@ p.hint{font-size:clamp(1rem,2.2vw,1.3rem); color:var(--ink-soft); margin:0; text
 #resultCard{padding:26px 32px; max-width:min(760px,94vw); text-align:center;}
 #resultTitle{font-size:clamp(1.6rem,4.4vw,2.6rem); font-weight:900; margin:0 0 10px;}
 #resultBody{font-size:clamp(1.05rem,2.6vw,1.4rem); color:var(--ink-soft);
-  margin:0 0 18px; line-height:1.5; font-weight:600;}
+  margin:0 0 18px; line-height:1.55; font-weight:600; white-space:pre-line;}
 #rewardStar{font-size:4.2rem; animation:pop .6s ease-out;}
 
 /* 證書 */
@@ -1004,16 +1004,16 @@ function judge(){
   };
 }
 
-/* 講清楚差在邊：漏咗咩、多咗咩（結果畫面先講；唔暗示可以即刻改籃） */
+/* 講清楚差在邊：漏咗咩、多咗咩（結果先講；唔暗示即刻改籃） */
 function diffSentence(r){
   const n = (ids)=> ids.map(i=>ITEMS[i].name).join("、");
   if(r.missing.length && r.extra.length)
-    return `貨：漏咗 ${n(r.missing)}，多咗 ${n(r.extra)}（唔喺清單）。下次對清楚先。`;
+    return `漏咗 ${n(r.missing)}，多咗 ${n(r.extra)}。`;
   if(r.missing.length)
-    return `貨：仲未有 ${n(r.missing)}。下次對清楚先。`;
+    return `漏咗 ${n(r.missing)}。`;
   if(r.extra.length)
-    return `貨：多咗 ${n(r.extra)}（清單上面冇）。下次對清楚先。`;
-  return "貨：同清單一樣。";
+    return `多咗 ${n(r.extra)}。`;
+  return "同清單一樣。";
 }
 
 function declare(ans){
@@ -1057,7 +1057,7 @@ function pay(choice){
     付足: paidFull ? "✓ 付足" : "✗ 未付足",
   });
 
-  // 星只獎「比足錢」——亂撳比少／唔比唔會有星
+  // 星只獎「比足錢」
   if(paidFull){
     SFX.star();
     state.stars++;
@@ -1073,40 +1073,49 @@ function pay(choice){
   go("result");
 }
 
-/* 結果文案：標題跟「付費」主線；正文 = 貨（短）+ 錢（主）。
-   ⚠ 顏色只准 --ok 或 --ink，唔准 --no 深紅懲罰色。 */
+/* 結果：兩行——貨 / 錢。標題跟付費；唔重複堆「付足」。
+   顏色只准 --ok 或 --ink，唔准 --no 深紅。 */
 function paintResult(){
   const r = judge();
   const ans = state.declareAns;
   const choice = state.payChoice;
   const t = $("#resultTitle"), b = $("#resultBody");
+  const d = diffSentence(r);
 
-  // —— 貨：短述（對貨誠實仍讚，但唔再冒充「已經付足」）——
-  let goods = "";
+  // 貨（一行）
+  let goods;
   if(ans==="diff" && !r.allMatch){
-    goods = "你老實講貨唔一樣。" + diffSentence(r);
+    goods = "貨：你老實講唔一樣。" + d;
   }else if(ans==="diff" && r.allMatch){
-    goods = "你話貨唔一樣；我再睇，原來一樣。你好小心。";
+    goods = "貨：你話唔一樣；再睇原來一樣。";
   }else if(ans==="same" && r.allMatch){
-    goods = "貨對清楚，一樣晒。";
+    goods = "貨：同清單一樣。";
   }else{
-    goods = "你話貨一樣；我再睇：" + diffSentence(r).replace(/^貨：/,"");
+    goods = "貨：你話一樣；再睇——" + d;
   }
 
-  // —— 錢：誠信主關 ——
+  // 錢（一行）+ 標題
+  let money, title, face, voice;
   if(choice==="full"){
-    t.textContent = "多謝你付足！"; t.style.color = "var(--ok)";
-    b.textContent = goods + " 錢：你比足啦。無人商店就係要咁——付足、講足。";
-    say("多謝你付足！無人店就係要咁。", "thanks");
+    title = "多謝你付足！";
+    money = "錢：你有付足。冇人睇住都照付，就係誠信。";
+    face = "thanks"; voice = "多謝你付足！冇人睇住都照付。";
+    t.style.color = "var(--ok)";
   }else if(choice==="less"){
-    t.textContent = "要付足先得"; t.style.color = "var(--ink)";
-    b.textContent = goods + " 錢：比少唔得。無人店要付足先走得。下次揀「比足錢」。";
-    say("唔少得。無人店要付足先走得。", "think");
+    title = "要比足先得";
+    money = "錢：比少唔得。下次請付足。";
+    face = "think"; voice = "比少唔得。下次要付足。";
+    t.style.color = "var(--ink)";
   }else{
-    t.textContent = "要畀錢先得"; t.style.color = "var(--ink)";
-    b.textContent = goods + " 錢：唔比錢唔得。自己攞嘅，自己付足。下次揀「比足錢」。";
-    say("要畀錢先得。自己攞嘅，自己付足。", "think");
+    title = "要畀錢先得";
+    money = "錢：唔比錢唔得。自己攞嘅，自己付足。";
+    face = "think"; voice = "要畀錢先得。自己攞嘅，自己付足。";
+    t.style.color = "var(--ink)";
   }
+
+  t.textContent = title;
+  b.textContent = goods + "\n" + money;
+  say(voice, face);
 }
 
 /* ============================================================
