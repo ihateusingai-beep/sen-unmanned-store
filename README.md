@@ -128,8 +128,12 @@ const CONFIG = {
   perItemCheck : true,  // false = 畫面 3 淨係並排睇，唔逐件問（更簡單）
   maxBasket    : 6,     // 籃容量上限
   sound        : true,  // 靜音班用
+  speech       : true,  // 機械人粵語／中文 TTS；靜音班改 false
 };
 ```
+
+**貨架常駐清單**：入店後頂欄顯示而家呢張單 3 件圖，學生唔使靠記門口。  
+**語音**：`say()` 同步 `speechSynthesis`（優先 zh-HK／粵語）。
 
 ---
 
