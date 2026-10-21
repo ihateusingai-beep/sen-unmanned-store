@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>無人商店 · 誠信小任務</title>
+<style>
+/* ============================================================
+   誠信價值觀學習週 × 數學科
+   無人商店教材 · 相同圖配對版（教材一）
+   零依賴單檔 · 離線可用 · 可列印
+   ============================================================ */
+
+:root{
+  /* 色彩：全部經過對比度檢查，正文對比 >= 7:1 (WCAG AAA) */
+  --bg:        #FFF6E6;
+  --bg-deep:   #FDEBC8;
+  --card:      #FFFFFF;
+  --ink:       #14202B;   /* vs --card = 16.9:1 */
+  --ink-soft:  #3D4C5A;   /* vs --card = 8.6:1  */
+  --line:      #14202B;
+  --ok:        #0B5D43;   /* 白字 = 7.6:1 */
+  --ok-soft:   #DCF0E7;
+  --no:        #8F2D00;   /* 白字 = 8.4:1 */
+  --no-soft:   #FCE4D6;
+  --focus:     #0B4F9E;
+  --gold:      #B8860B;
+  /* 已核對＝中性藍灰。唔可以用綠色：學生會讀成「啱咗」，
+     等於系統暗中洩漏對錯，會破壞誠信教學。 */
+  --done-bg:   #E6EDF3;
+
+  --tap: 64px;             /* 最細可點擊範圍 */
+  --r: 18px;
+}
+
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+
+html,body{height:100%;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"PingFang HK","PingFang TC","Heiti TC","Noto Sans HK",
+              "Microsoft JhengHei","Hiragino Sans GB",system-ui,sans-serif;
+  overflow:hidden;
+  /* 柔和背景格仔：營造店面場景感，唔搶視覺重點 */
+  background-image:
+    linear-gradient(rgba(20,32,43,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20,32,43,.045) 1px, transparent 1px);
+  background-size:56px 56px;
+}
+
+/* ---------- 版面骨架 ---------- */
+#app{
+  position:fixed; inset:0;
+  display:flex; flex-direction:column;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right)
+          env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* 頂部狀態條 */
+#topbar{
+  flex:0 0 auto;
+  display:flex; align-items:center; gap:14px;
+  padding:10px 18px;
+  background:var(--card);
+  border-bottom:3px solid var(--line);
+  min-height:62px;
+}
+#topbar .title{font-size:1.05rem;font-weight:800;letter-spacing:.02em;}
+#stars{display:flex;gap:6px;margin-left:auto;font-size:1.7rem;line-height:1;}
+#stars .s{filter:grayscale(1) opacity(.28); transition:transform .25s;}
+#stars .s.on{filter:none;}
+#stars .s.pop{animation:pop .45s ease-out;}
+@keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.6)}100%{transform:scale(1)}}
+#progress{
+  background:var(--bg-deep); border:2px solid var(--line); border-radius:999px;
+  padding:5px 15px; font-weight:800; font-size:.95rem; white-space:nowrap;
+}
+#teacherBtn{
+  min-width:var(--tap); min-height:44px;
+  border:2px solid var(--line); border-radius:12px; background:var(--card);
+  color:var(--ink-soft); font-weight:700; font-size:.85rem; cursor:pointer;
+}
+#teacherBtn:hover{background:var(--bg-deep);}
+
+/* 主舞台 */
+#stage{flex:1 1 auto; position:relative; overflow:hidden; min-height:0;}
+.screen{
+  position:absolute; inset:0;
+  display:none; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:20px; padding:20px 20px 8px;
+  overflow-y:auto;
+}
+.screen.active{display:flex; animation:fade .35s ease-out; justify-content:safe center;}
+@keyframes fade{from{opacity:0; transform:translateY(14px)}to{opacity:1; transform:none}}
+
+h2.screen-h{
+  font-size:clamp(1.4rem,3.4vw,2.1rem); font-weight:900; margin:0;
+  text-align:center; line-height:1.25;
+}
+p.hint{font-size:clamp(1rem,2.2vw,1.3rem); color:var(--ink-soft); margin:0; text-align:center; font-weight:600;}
+
+/* 底部列：機器人 + 購物籃。用 flex 而唔係 absolute，
+   結構上保證兩者唔會互相遮擋（任何闊度都唔會重疊） */
+#bottombar{
+  flex:0 0 auto;
+  display:flex; align-items:flex-end; justify-content:space-between;
+  gap:14px; padding:10px 16px;
+}
+#bot{
+  display:flex; align-items:flex-end; gap:12px; pointer-events:none;
+  max-width:min(470px,58%);
+}
+#bubble{
+  background:var(--card); border:3px solid var(--line); border-radius:20px;
+  padding:12px 16px; font-size:clamp(1rem,2.2vw,1.3rem);
+  font-weight:800; line-height:1.35; margin-bottom:10px;
+  box-shadow:4px 4px 0 rgba(20,32,43,.16);
+}
+#bubble:empty{display:none;}
+#botSvg{width:clamp(80px,12vw,118px); height:auto; flex:0 0 auto;
+  filter:drop-shadow(3px 4px 0 rgba(20,32,43,.16));}
+
+/* ---------- 卡片 / 圖磚 ---------- */
+.card{
+  background:var(--card); border:3px solid var(--line); border-radius:var(--r);
+  box-shadow:5px 5px 0 rgba(20,32,43,.14);
+}
+/* 固定 3 欄：貨架永遠 6 件（3 清單 + 3 干擾）＝ 3+3 兩行，
+   唔會出現孤行；中度智障學生掃視負擔亦最低 */
+.tiles{
+  display:grid; gap:14px;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  max-width:820px; margin:0 auto;
+}
+.tile{
+  background:var(--card); border:3px solid var(--line); border-radius:var(--r);
+  min-height:132px; padding:10px 6px; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  font-family:inherit; color:var(--ink);
+  transition:transform .12s, background .15s;
+}
+.tile .emo{font-size:clamp(3rem,7vw,4.4rem); line-height:1;}
+.tile .nm{font-size:.92rem; font-weight:700; color:var(--ink-soft);}
+.tile:hover{background:var(--bg-deep);}
+.tile:active{transform:scale(.94);}
+.tile:disabled{opacity:.4; cursor:default;}
+.tile:focus-visible, .big:focus-visible, .nav-btn:focus-visible{
+  outline:4px solid var(--focus); outline-offset:3px;
+}
+
+/* 清單卡（三張單） */
+.lists{display:flex; gap:20px; flex-wrap:wrap; justify-content:center;}
+.list-card{
+  width:min(232px,42vw); background:var(--card); border:3px solid var(--line);
+  border-radius:var(--r); padding:16px 12px; cursor:pointer;
+  display:flex; flex-direction:column; gap:10px; align-items:center;
+  box-shadow:5px 5px 0 rgba(20,32,43,.14); font-family:inherit; color:var(--ink);
+  transition:transform .12s, background .15s;
+}
+.list-card:hover{background:var(--bg-deep);}
+.list-card:active{transform:scale(.97);}
+.list-card .idx{
+  font-size:1rem; font-weight:900; background:var(--ink); color:#fff;
+  border-radius:999px; padding:3px 14px;
+}
+.list-card.done{background:var(--ok-soft);}
+.list-card .row{display:flex;gap:8px;align-items:center;}
+.list-card .dot{font-size:clamp(2.1rem,5vw,2.9rem); line-height:1;}
+.list-card .tick{font-size:1.7rem;}
+
+/* 大按鈕 */
+.big{
+  min-height:96px; min-width:min(320px,70vw); padding:16px 28px;
+  border-radius:22px; border:3px solid var(--line); cursor:pointer;
+  font-family:inherit; font-size:clamp(1.4rem,3.6vw,2.1rem); font-weight:900;
+  display:flex; align-items:center; justify-content:center; gap:12px;
+  box-shadow:5px 5px 0 rgba(20,32,43,.2); transition:transform .12s;
+}
+.big:active{transform:translateY(4px); box-shadow:1px 1px 0 rgba(20,32,43,.2);}
+/* 誠實確認鎖死中（雙擊防護）：保持原色，只收起按壓反應，
+   唔用 opacity —— 半透明會令掣「褪色」，睇落似被停用咗 */
+.big:disabled{opacity:1; cursor:default; transform:none; box-shadow:5px 5px 0 rgba(20,32,43,.14);}
+.big.primary{background:var(--ok); color:#fff;}
+.big.alt{background:var(--no); color:#fff;}
+.big.ghost{background:var(--card); color:var(--ink);}
+.big .ico{font-size:1.3em;}
+.btn-row{display:flex; gap:18px; flex-wrap:wrap; justify-content:center;}
+
+/* 購物籃 */
+#basket{
+  flex:0 0 auto;
+  min-width:190px;
+  background:var(--card); border:3px solid var(--line); border-radius:var(--r);
+  box-shadow:5px 5px 0 rgba(20,32,43,.14);
+  padding:8px 14px; display:flex; align-items:center; gap:12px;
+}
+#basket .bico{font-size:2.8rem; line-height:1;}
+#basket .items{display:flex;flex-wrap:wrap;gap:4px;max-width:230px;}
+#basket .items span{font-size:1.9rem; line-height:1.1;}
+#basket .cap{font-size:.85rem;font-weight:800;color:var(--ink-soft);}
+
+/* 取貨時飛入籃的動畫 */
+@keyframes flyToBasket{
+  0%{transform:scale(1); opacity:1}
+  55%{transform:scale(1.35) translateY(-16px); opacity:1}
+  100%{transform:scale(.5) translateY(40px) translateX(90px); opacity:0}
+}
+.flying{animation:flyToBasket .55s ease-in forwards; pointer-events:none;}
+@keyframes jiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-4deg)}75%{transform:rotate(4deg)}}
+.jiggle{animation:jiggle .3s ease-in-out 2;}
+
+/* ---------- 核對枱 ---------- */
+#s-check{gap:14px;}
+#checkWrap{display:flex; gap:clamp(16px,4vw,56px); align-items:flex-start;
+  justify-content:center; flex-wrap:wrap; width:100%;}
+.col{display:flex; flex-direction:column; align-items:center; gap:10px;}
+.col .lab{
+  font-size:1.05rem; font-weight:900; background:var(--ink); color:#fff;
+  padding:4px 16px; border-radius:999px;
+}
+.col .stack{display:flex; flex-direction:column; gap:8px;}
+.mini{
+  width:clamp(74px,11vw,104px); aspect-ratio:1; border:3px solid var(--line);
+  border-radius:14px; background:var(--card); display:grid; place-items:center;
+  font-size:clamp(2.3rem,6vw,3.4rem); line-height:1; padding:0; cursor:pointer;
+  font-family:inherit;
+}
+.mini.small{font-size:clamp(1.7rem,4.4vw,2.6rem);}
+.mini.dim{opacity:.45;}
+.mini.done{background:var(--done-bg);}
+
+/* 放大檢視 + 有／冇 按鈕同一行，確保唔使 scroll 就答到 */
+.ask-row{
+  display:flex; align-items:center; justify-content:center;
+  gap:16px; flex-wrap:wrap;
+}
+#zoom{
+  display:none; align-items:center; gap:14px;
+  padding:12px 20px; background:var(--bg-deep);
+  border:4px solid var(--line); border-radius:22px;
+}
+#zoom.show{display:flex;}
+#zoom .big-emo{font-size:clamp(2.6rem,8vw,4.6rem); line-height:1;}
+#zoom .zoom-cap{font-size:clamp(.95rem,2.2vw,1.2rem); font-weight:800; color:var(--ink-soft);}
+#s-check .big{min-height:84px; min-width:min(180px,38vw); font-size:clamp(1.2rem,3vw,1.7rem);
+  padding:12px 16px;}
+
+/* 誠實確認 */
+/* 付足錢輕視覺：靜態橋樑圖，唔動畫、唔搶答、唔洩漏對錯 */
+#payBridge{
+  display:flex; align-items:center; justify-content:center; gap:clamp(10px,2.5vw,18px);
+  flex-wrap:wrap; margin:0; padding:10px 16px;
+  background:var(--card); border:3px solid var(--line); border-radius:16px;
+  box-shadow:4px 4px 0 rgba(20,32,43,.12);
+  max-width:min(520px,94vw);
+}
+#payBridge .pb-step{
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  font-weight:900; line-height:1.15; text-align:center;
+}
+#payBridge .pb-ico{font-size:clamp(2.4rem,7vw,3.4rem); line-height:1;}
+#payBridge .pb-lab{font-size:clamp(.95rem,2.2vw,1.15rem); color:var(--ink);}
+#payBridge .pb-arrow{
+  font-size:clamp(1.6rem,4vw,2.2rem); font-weight:900; color:var(--ink);
+  line-height:1; padding-bottom:1.1rem; /* 對齊 icon 中線，唔對齊文字 */
+}
+#declareQ{font-size:clamp(1.3rem,3.6vw,2.2rem); font-weight:900; text-align:center;
+  max-width:15em; margin:0; line-height:1.3;}
+
+/* 結果 */
+#resultCard{padding:26px 32px; max-width:min(760px,94vw); text-align:center;}
+#resultTitle{font-size:clamp(1.6rem,4.4vw,2.6rem); font-weight:900; margin:0 0 10px;}
+#resultBody{font-size:clamp(1.05rem,2.6vw,1.4rem); color:var(--ink-soft);
+  margin:0 0 18px; line-height:1.5; font-weight:600;}
+#rewardStar{font-size:4.2rem; animation:pop .6s ease-out;}
+
+/* 證書 */
+#cert{
+  background:var(--card); border:6px double var(--line); border-radius:20px;
+  padding:32px 40px; text-align:center; max-width:min(680px,94vw);
+  box-shadow:6px 6px 0 rgba(20,32,43,.16);
+}
+#cert .c-title{font-size:clamp(1.6rem,4.6vw,2.6rem); font-weight:900; margin:0 0 6px;}
+#cert .c-sub{font-size:clamp(1rem,2.4vw,1.25rem); color:var(--ink-soft); font-weight:700; margin:0 0 18px;}
+#cert .c-name{
+  border-bottom:3px solid var(--line); display:inline-block; min-width:min(340px,70vw);
+  font-size:clamp(1.4rem,3.6vw,2rem); font-weight:900; padding:2px 12px;
+}
+#cert .c-stars{font-size:2.6rem; margin:14px 0;}
+#cert input{font:inherit;}
+
+/* 老師記錄面板 */
+#teacherPanel{
+  position:fixed; inset:0; z-index:90; background:rgba(20,32,43,.72);
+  display:none; align-items:center; justify-content:center; padding:20px;
+}
+#teacherPanel.show{display:flex;}
+#teacherBox{
+  background:var(--card); border:4px solid var(--line); border-radius:20px;
+  max-width:820px; width:100%; max-height:86vh; overflow:auto; padding:24px;
+}
+#teacherBox h3{margin:0 0 4px; font-size:1.5rem;}
+#teacherBox pre{
+  background:var(--bg); border:2px solid var(--line); border-radius:12px;
+  padding:14px; font-size:.95rem; line-height:1.5; white-space:pre-wrap;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace; margin:12px 0;
+}
+#teacherBox .close{position:sticky; top:0; float:right;}
+
+/* ---------- 列印 ---------- */
+@media print{
+  html,body{overflow:visible; background:#fff;}
+  /* position:fixed 元素喺多頁列印會重複/截斷，列印時必須改 static */
+  #app{position:static; inset:auto; height:auto;}
+  #topbar,#bottombar,#teacherBtn,#teacherPanel,.screen:not(#s-cert){display:none !important;}
+  #stage{overflow:visible;}
+  #s-cert{display:flex !important; position:static;}
+  /* 姓名輸入框 / 重新開始掣 / 「按此畫面可直接列印」提示 係「做證書用嘅控制項」，
+     唔係證書本身，印落去會令張證狀多個輸入格同一粒掣。 */
+  #s-cert .c-edit, #s-cert .c-hint, #s-cert > #btnRestart{display:none !important;}
+  #cert{border:4px solid #000; box-shadow:none;}
+}
+
+/* ---------- 動效偏好 ---------- */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important; animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;}
+}
+
+@media (max-width:760px){
+  /* 窄屏仍維持 3 欄（tile 會縮細），保住 3+3 唔會變孤行 */
+  .list-card{width:min(168px,28vw); padding:12px 8px; gap:7px;}
+  .list-card .dot{font-size:clamp(1.7rem,4vw,2.2rem);}
+  .lists{gap:10px;}
+  /* 核對畫面：zoom 精簡成淨係一個大圖，令「有／冇」按鈕同一行見到 */
+  #zoom{padding:8px 12px; gap:0;}
+  #zoom .zoom-cap{display:none;}
+  #bot{max-width:60%;}
+  #basket{min-width:150px;}
+  #basket .items{max-width:130px;}
+  #basket .items span{font-size:1.5rem;}
+}
+@media (max-width:480px){
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr));}
+  #bottombar{flex-direction:column-reverse; align-items:stretch; gap:8px;}
+  #bot{max-width:100%;}
+  #bubble{margin-bottom:0;}
+  #basket{min-width:0;}
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="topbar">
+    <span class="title">無人商店 · 誠信小任務</span>
+    <span id="progress">第 1 單 / 共 3 單</span>
+    <span id="stars" aria-label="誠信星星"></span>
+    <button id="teacherBtn" type="button" title="老師記錄">老師</button>
+  </div>
+
+  <div id="stage">
+
+    <!-- ── 畫面 0：封面 ───────────────────────────── -->
+    <section class="screen active" id="s-cover">
+      <h2 class="screen-h">無人商店</h2>
+      <p class="hint">冇人睇住，都要<strong>付足錢</strong>。<br>自己對清楚，再老實講。</p>
+      <button class="big primary" id="btnStart" type="button">
+        <span class="ico">🚪</span> 開始入店
+      </button>
+    </section>
+
+    <!-- ── 畫面 1：門口（揀清單） ─────────────────── -->
+    <section class="screen" id="s-door">
+      <h2 class="screen-h">今日有 3 張購物清單</h2>
+      <p class="hint">㩒一張開始</p>
+      <div class="lists" id="doorLists"></div>
+    </section>
+
+    <!-- ── 畫面 2：店內貨架取貨 ───────────────────── -->
+    <section class="screen" id="s-shop">
+      <h2 class="screen-h">貨架</h2>
+      <p class="hint">㩒你需要嘅嘢，放入籃度</p>
+      <div class="card" style="padding:18px 22px;">
+        <div class="tiles" id="shelf"></div>
+      </div>
+      <button class="big primary" id="btnToCheck" type="button">
+        <span class="ico">✅</span> 我攞完啦，核對一下
+      </button>
+    </section>
+
+    <!-- ── 畫面 3：核對枱（逐項自己核對） ─────────── -->
+    <section class="screen" id="s-check">
+      <h2 class="screen-h" id="checkH">核對一下</h2>
+      <div id="checkWrap">
+        <div class="col">
+          <span class="lab">清單</span>
+          <div class="stack" id="checkList"></div>
+        </div>
+        <div class="col">
+          <span class="lab">我攞咗</span>
+          <div class="stack" id="checkBasket"></div>
+        </div>
+      </div>
+      <div class="ask-row">
+        <div id="zoom">
+          <span class="big-emo" id="zoomEmo"></span>
+          <span class="zoom-cap">睇清楚呢一樣嘢</span>
+        </div>
+        <div class="btn-row" id="checkCtl" style="display:none;">
+          <button class="big primary" id="btnHas" type="button"><span class="ico">✅</span> 有喎</button>
+          <button class="big alt" id="btnNo" type="button"><span class="ico">❌</span> 冇喎</button>
+        </div>
+      </div>
+      <button class="big primary" id="btnCheckDone" type="button" style="display:none;">
+        <span class="ico">✅</span> 我睇清楚晒啦
+      </button>
+    </section>
+
+    <!-- ── 畫面 4：誠實確認（＝付足錢） ───────────── -->
+    <section class="screen" id="s-declare">
+      <h2 class="screen-h">好似付足錢</h2>
+      <div id="payBridge" aria-hidden="true">
+        <div class="pb-step">
+          <span class="pb-ico">🛒</span>
+          <span class="pb-lab">對清楚</span>
+        </div>
+        <span class="pb-arrow" aria-hidden="true">→</span>
+        <div class="pb-step">
+          <span class="pb-ico">💰</span>
+          <span class="pb-lab">付足</span>
+        </div>
+      </div>
+      <p id="declareQ">你攞嘅嘢，同清單一樣嗎？<br><span style="font-size:.72em;font-weight:700;color:var(--ink-soft);">冇人睇住都要老實講</span></p>
+      <div class="btn-row">
+        <button class="big primary" id="btnSame" type="button"><span class="ico">✅</span> 一樣</button>
+        <button class="big alt" id="btnDiff" type="button"><span class="ico">❌</span> 唔一樣</button>
+      </div>
+    </section>
+
+    <!-- ── 畫面 5：結果 ───────────────────────────── -->
+    <section class="screen" id="s-result">
+      <div class="card" id="resultCard">
+        <h2 id="resultTitle"></h2>
+        <p id="resultBody"></p>
+        <div id="rewardStar" style="display:none;">⭐</div>
+      </div>
+      <button class="big primary" id="btnNext" type="button">下一張清單</button>
+    </section>
+
+    <!-- ── 畫面 6：證書 ───────────────────────────── -->
+    <section class="screen" id="s-cert">
+      <div id="cert">
+        <p class="c-sub" style="margin-bottom:4px;">誠信價值觀學習週</p>
+        <h2 class="c-title">無人商店 · 誠信小助手</h2>
+        <p class="c-sub">冇人睇住都付足錢。<br>你今日自己對清楚，再老實講。</p>
+        <div style="margin:18px 0;">
+          <span class="c-name" id="certName">&nbsp;</span>
+        </div>
+        <div class="c-stars" id="certStars">⭐ ⭐ ⭐</div>
+        <label class="c-sub c-edit" style="display:block;">
+          姓名：<input id="nameInput" style="font:inherit;font-weight:800;border:2px solid #14202B;
+            border-radius:8px;padding:6px 10px;text-align:center;max-width:60%;" placeholder="請輸入">
+        </label>
+        <p class="c-sub c-hint" style="margin-top:14px;font-size:.9rem;">按此畫面可直接列印獎狀</p>
+      </div>
+      <button class="big ghost" id="btnRestart" type="button" style="font-size:1rem;min-height:60px;">
+        🔄 重新開始
+      </button>
+    </section>
+
+  </div>
+
+  <!-- 底部列：購物籃（左）+ 小機器人（右） -->
+  <div id="bottombar">
+
+    <div id="basket">
+      <span class="bico">🛒</span>
+      <div>
+        <div class="items" id="basketItems"></div>
+        <div class="cap" id="basketCap">籃度未有嘢</div>
+      </div>
+    </div>
+
+    <div id="bot">
+      <div id="bubble" role="status" aria-live="polite"></div>
+      <svg id="botSvg" viewBox="0 0 120 130" aria-label="小機器人">
+        <!-- 天線 -->
+        <circle cx="60" cy="12" r="8" fill="#FFC83D" stroke="#14202B" stroke-width="4"/>
+        <line x1="60" y1="20" x2="60" y2="32" stroke="#14202B" stroke-width="5"/>
+        <!-- 頭 -->
+        <rect x="12" y="30" width="96" height="66" rx="20" fill="#8FD3F4" stroke="#14202B" stroke-width="5"/>
+        <!-- 眼 -->
+        <circle class="eye" cx="40" cy="58" r="9" fill="#14202B"/>
+        <circle class="eye" cx="80" cy="58" r="9" fill="#14202B"/>
+        <circle cx="43" cy="55" r="3" fill="#fff"/>
+        <circle cx="83" cy="55" r="3" fill="#fff"/>
+        <!-- 嘴（表情由 JS 改 path） -->
+        <path id="mouth" d="M45 80 Q60 80 75 80" stroke="#14202B" stroke-width="5"
+              fill="none" stroke-linecap="round"/>
+        <!-- 身 -->
+        <rect x="26" y="100" width="68" height="24" rx="10" fill="#5FC0EC" stroke="#14202B" stroke-width="5"/>
+      </svg>
+    </div>
+
+  </div>
+</div>
+
+<!-- 老師記錄面板 -->
+<div id="teacherPanel">
+  <div id="teacherBox">
+    <button class="big ghost close" id="btnCloseTeacher" type="button"
+            style="font-size:1rem;min-height:52px;">✕ 關閉</button>
+    <h3>老師記錄</h3>
+    <p style="color:var(--ink-soft);font-weight:600;margin:4px 0 0;">
+      每張單記低：學生攞咗幾多件、逐項核對結果、最後誠實答覆。<br>
+      留意「答『一樣』但實際唔一樣」嘅學生 = 需要再教「自己核對」。
+    </p>
+    <pre id="teacherOut">仲未有記錄。</pre>
+    <button class="big ghost" id="btnCopy" type="button" style="font-size:1rem;min-height:56px;">
+      📋 複製文字
+    </button>
+    <button class="big ghost" id="btnClear" type="button" style="font-size:1rem;min-height:56px;">
+      🗑 清除記錄
+    </button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   資料層 — 換成插圖只需要改 ITEMS 一個 map（見 docs/02）
+   ============================================================ */
+const ITEMS = {
+  apple:   {emo:"🍎", name:"蘋果"},
+  milk:    {emo:"🥛", name:"牛奶"},
+  cookie:  {emo:"🍪", name:"餅乾"},
+  banana:  {emo:"🍌", name:"香蕉"},
+  choco:   {emo:"🍫", name:"朱古力"},
+  bread:   {emo:"🍞", name:"麵包"},
+  grape:   {emo:"🍇", name:"葡萄"},
+  corn:    {emo:"🌽", name:"粟米"},
+  cheese:  {emo:"🧀", name:"芝士"},
+  juicebox:{emo:"🧃", name:"果汁盒"},
+  melon:   {emo:"🍉", name:"西瓜"},
+  pear:    {emo:"🍐", name:"梨"},
+  egg:     {emo:"🥚", name:"雞蛋"},
+  orange:  {emo:"🍊", name:"橙"},
+  chips:   {emo:"🍟", name:"薯片"},
+};
+
+/* 三張清單：items = 清單上要取的；shelf = 額外干擾項（唔喺清單）
+   設計規則：每張單 3 清單 + 3 干擾 = 貨架 6 件，3+3 兩行。
+   同一畫面唔好出現外型相近嘅一對（例：紙盒飲品 vs 杯飲品）。*/
+const LISTS = [
+  { items:["apple","milk","cookie"],   shelf:["banana","bread","egg"] },
+  { items:["banana","choco","bread"],  shelf:["apple","cheese","chips"] },
+  { items:["grape","corn","cheese"],   shelf:["banana","juicebox","pear"] },
+];
+
+/* 可調參數（老師/developer 喺 console 改都得） */
+const CONFIG = {
+  perItemCheck : true,  // 畫面 3 逐項核對（true）定淨係並排睇（false）
+  maxBasket    : 6,     // 籃容量上限，超出只作中性提示，唔視為錯
+  sound        : true,
+};
+
+/* ============================================================
+   狀態
+   ============================================================ */
+const state = {
+  listIndex : 0,
+  basket    : [],
+  checks    : [],   // {item, said:'has'|'no', right:bool}
+  cursor    : 0,    // 核對到第幾件
+  stars     : 0,
+  log       : [],   // 每張單一筆
+  declared  : false, // 本單係咪已經交咗誠實答覆（雙擊鎖用，每單重置）
+};
+
+const $  = (s)=>document.querySelector(s);
+const $$ = (s)=>Array.from(document.querySelectorAll(s));
+
+/* ============================================================
+   音效 — WebAudio 實時合成，零外部檔 = 離線可用
+   ============================================================ */
+let actx = null;
+function beep(freqs, dur=0.09, type="sine"){
+  if(!CONFIG.sound) return;
+  try{
+    actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+    if(actx.state === "suspended") actx.resume();
+    freqs.forEach((f,i)=>{
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = type; o.frequency.value = f;
+      const t0 = actx.currentTime + i*0.09;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.16, t0+0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+      o.connect(g); g.connect(actx.destination);
+      o.start(t0); o.stop(t0+dur+0.02);
+    });
+  }catch(e){ /* 靜音環境唔影響流程 */ }
+}
+const SFX = {
+  tap : ()=>beep([660]),
+  star: ()=>beep([784, 1046, 1318], 0.13),
+  soft: ()=>beep([392], 0.14),
+};
+
+/* ============================================================
+   小機器人
+   ============================================================ */
+const FACES = {
+  neutral:"M45 80 Q60 80 75 80",                       // 平線：中性，唔透露對錯
+  happy  :"M42 76 Q60 92 78 76",                       // 微笑
+  think : "M45 76 Q60 88 75 72",                       // 疑惑
+  thanks:"M40 74 Q60 94 80 74",                       // 大笑
+};
+function say(text, face="neutral"){
+  $("#bubble").textContent = text;
+  $("#mouth").setAttribute("d", FACES[face] || FACES.neutral);
+}
+function clearSay(){
+  $("#bubble").textContent = "";
+  $("#mouth").setAttribute("d", FACES.neutral);
+}
+
+/* ============================================================
+   畫面切換
+   ────────────────────────────────────────────────────────────
+   ⚠ 輸入閘（input lock）—— 呢個係雙擊 bug 嘅真正根因。
+
+   畫面 A 嘅掣同畫面 B 嘅掣經常**位置重疊**（例如誠實確認嘅
+   「唔一樣」 y≈379-475，結果畫面嘅「下一張清單」 y≈405-501）。
+   學生雙擊「唔一樣」時：第一次 click → declare() → go("result")，
+   第二次 mousedown 已經喺**結果畫面**落腳，命中「下一張清單」，
+   結果訊息（漏咗咩／多咗咩 + 機器人回饋）被完全跳過。
+
+   喺原本個掣上面 disable 係唔夠 —— 到時個掣已經喺另一個 hidden
+   畫面，游標下面根本唔係佢。唯一穩陣做法係喺畫面切換之後
+   短時間內吞晒所有 click（capture phase，喺目標 handler 之前）。
+
+   420ms 嘅取捨：動效本身已經 480-550ms，即係學生喺動畫未完時
+   根本睇唔清新畫面有咩掣。損失 = 撠多一下；收益 = 唔會跳過
+   教學環節。對中度智障學生，呢個 trade 非常值。
+*/
+let inputLockUntil = 0;
+const INPUT_LOCK_MS = 420;
+
+/* 任何「學生一撠就換咗畫面內容」嘅動作都要 arm 閘門，
+   唔淨係 go()。反例（已修）：核對畫面答完最後一項之後，
+   「有喎」(y≈446-530) 被「我睇清楚晒啦」(y≈453-537) 原地換走，
+   學生雙擊「有喎」第二次就會撳落結尾掣 → 直接跳過誠實確認畫面，
+   連星星都攞唔到。answerCheck() 唔經 go()，所以要喺呢度另外 arm。 */
+function lockInput(){ inputLockUntil = performance.now() + INPUT_LOCK_MS; }
+
+function go(stage){
+  $$(".screen").forEach(s=>s.classList.remove("active"));
+  const map = {
+    cover:"#s-cover", door:"#s-door", shop:"#s-shop",
+    check:"#s-check", declare:"#s-declare", result:"#s-result", cert:"#s-cert",
+  };
+  $(map[stage]).classList.add("active");
+  lockInput();
+  $("#progress").textContent = stage==="cert"
+    ? `完成晒 ${LISTS.length} 張單`
+    : `第 ${Math.min(state.listIndex+1, LISTS.length)} 單 / 共 ${LISTS.length} 單`;
+}
+
+/* 畫面切換後 INPUT_LOCK_MS 之內吞晒 click。
+   用 capture phase（第三個參數 true），喺任何目標 handler 之前截，
+   所以連事件綁定喺 #teacherPanel 嘅「點背景關閉」都一齊擋。 */
+document.addEventListener("click", (e)=>{
+  if(performance.now() < inputLockUntil){
+    e.stopPropagation();
+    e.preventDefault();
+  }
+}, true);
+
+/* ============================================================
+   狀態列：星星
+   ============================================================ */
+function renderStars(popLast=false){
+  const box = $("#stars"); box.innerHTML = "";
+  for(let i=0;i<LISTS.length;i++){
+    const s = document.createElement("span");
+    s.className = "s" + (i < state.stars ? " on" : "")
+                 + (popLast && i === state.stars-1 ? " pop" : "");
+    s.textContent = "⭐";
+    box.appendChild(s);
+  }
+}
+
+/* ============================================================
+   畫面 1：門口
+   ============================================================ */
+function renderDoor(){
+  const wrap = $("#doorLists"); wrap.innerHTML = "";
+  LISTS.forEach((L,i)=>{
+    const done = i < state.listIndex;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "list-card" + (done ? " done" : "");
+    b.innerHTML =
+      `<span class="idx">第 ${i+1} 單</span>` +
+      L.items.map(id=>`<span class="row"><span class="dot">${ITEMS[id].emo}</span></span>`).join("") +
+      (done ? `<span class="tick">✅</span>` : "");
+    b.addEventListener("click", ()=>{
+      if(done){ beep([220]); say("呢張單做完咗㗎喇，㩒下一張啦"); return; }
+      SFX.tap(); state.listIndex = i; startList();
+    });
+    wrap.appendChild(b);
+  });
+}
+
+/* ============================================================
+   畫面 2：取貨
+   ============================================================ */
+function renderShop(){
+  const L = LISTS[state.listIndex];
+  const ids = L.items.concat(L.shelf);
+  const shelf = $("#shelf"); shelf.innerHTML = "";
+  ids.forEach(id=>{
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "tile";
+    b.innerHTML = `<span class="emo">${ITEMS[id].emo}</span><span class="nm">${ITEMS[id].name}</span>`;
+    b.addEventListener("click", ()=>pickItem(id, b));
+    shelf.appendChild(b);
+  });
+  say("㩒你需要嘅嘢放入籃度，慢慢嚟，唔急。", "neutral");
+}
+
+function pickItem(id, el){
+  if(state.basket.length >= CONFIG.maxBasket){
+    // 中性提示：講容量，唔講「你攞錯」
+    beep([300]); el.classList.add("jiggle");
+    say("籃度已經裝滿晒喇。", "think");
+    return;
+  }
+  state.basket.push(id);
+  SFX.tap();
+  el.classList.add("flying");
+  setTimeout(()=>{ el.disabled = true; el.classList.remove("flying"); }, 480);
+  renderBasket();
+  const n = state.basket.length;
+  say(n===1 ? "攞咗一樣嘢。" : `而家籃度有 ${n} 樣嘢。`, "neutral");
+}
+
+function renderBasket(){
+  const box = $("#basketItems"); box.innerHTML = "";
+  state.basket.forEach(id=>{
+    const s = document.createElement("span"); s.textContent = ITEMS[id].emo; box.appendChild(s);
+  });
+  const n = state.basket.length;
+  $("#basketCap").textContent = n ? `籃度有 ${n} 樣嘢` : "籃度未有嘢";
+}
+
+/* ============================================================
+   畫面 3：核對
+   ⚠ 重點設計：機器人全程中性，唔會透露對錯。
+     對錯只在畫面 4 學生自己誠實回答之後才反應。
+   ============================================================ */
+function renderCheck(){
+  const L = LISTS[state.listIndex];
+  const wanted = L.items;
+
+  // 左：清單
+  const cl = $("#checkList"); cl.innerHTML = "";
+  wanted.forEach(id=>{
+    const d = document.createElement("div");
+    d.className = "mini"; d.textContent = ITEMS[id].emo;
+    // div 加 aria-label 而唔加 role 會被 AT 忽略 → 要 role="img"
+    d.setAttribute("role", "img");
+    d.setAttribute("aria-label", ITEMS[id].name);
+    cl.appendChild(d);
+  });
+
+  // 右：籃
+  const cb = $("#checkBasket"); cb.innerHTML = "";
+  if(state.basket.length === 0){
+    const d = document.createElement("div");
+    d.className = "mini small"; d.textContent = "🛒"; d.style.opacity = .4;
+    cb.appendChild(d);
+  } else {
+    state.basket.forEach((id,i)=>{
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "mini small" + (i < state.cursor ? " done" : "");
+      b.textContent = ITEMS[id].emo;
+      b.setAttribute("aria-label", ITEMS[id].name);
+      b.addEventListener("click", ()=>onCheckTap(i));
+      cb.appendChild(b);
+    });
+  }
+
+  const zoom = $("#zoom"), ctl = $("#checkCtl"), done = $("#btnCheckDone");
+  zoom.classList.remove("show"); ctl.style.display = "none";
+
+  if(!CONFIG.perItemCheck){
+    done.style.display = ""; done.textContent = "我睇清楚晒啦";
+    say("左邊係清單，右邊係你攞咗嘅嘢。慢慢對一次。", "neutral");
+    return;
+  }
+  done.style.display = "none";
+
+  if(state.basket.length === 0){
+    // 理論上唔會行到呢度（按鈕已攔），保留做保險
+    say("籃度乜都冇喎。咁你攞嘅嘢，同清單一樣嗎？", "think");
+    onCheckTapDone();
+    return;
+  }
+  if(state.cursor >= state.basket.length){
+    done.style.display = ""; done.textContent = "我睇清楚晒啦";
+    say("全部睇完啦。你攞嘅嘢，同清單一樣嗎？", "neutral");
+    return;
+  }
+  onCheckTap(state.cursor);
+}
+
+function onCheckTap(i){
+  // 下界檢查：已核對過嘅項目唔可以撳返。
+  // 冇呢個 guard，學生再撳返第 1 件會令 cursor 倒轉，
+  // checks 記低同一件兩次（污染老師記錄），並且卡喺同一題出唔到結尾掣。
+  if(i >= state.basket.length || i < state.cursor) return;
+  state.cursor = i;
+  const id = state.basket[i];
+  $("#zoomEmo").textContent = ITEMS[id].emo;
+  $("#zoom").classList.add("show");
+  $("#checkCtl").style.display = "";
+  $("#btnCheckDone").style.display = "none";
+  say("呢個嘢，清單上面有冇？", "think");
+  SFX.tap();
+}
+
+function answerCheck(said){
+  const id = state.basket[state.cursor];
+  if(id === undefined) return;
+  lockInput();   // 呢度會原地換走有／冇掣 → 必須 arm 閘門（見 lockInput 註解）
+  const right = LISTS[state.listIndex].items.includes(id) === (said === "has");
+  state.checks.push({ item:id, said, right });
+  SFX.soft();
+  state.cursor++;
+  // 已答過嘅項目鎖住（disable），令 onCheckTap 嘅下界 guard 由 UI 層再守一次。
+  // 底色仍然中性，唔顯示對錯。
+  $$("#checkBasket .mini").forEach((el,i)=>{
+    const done = i < state.cursor;
+    el.classList.toggle("done", done);
+    el.disabled = done;
+  });
+  if(state.cursor >= state.basket.length){
+    $("#zoom").classList.remove("show");
+    $("#checkCtl").style.display = "none";
+    $("#btnCheckDone").style.display = "";
+    say("全部睇完啦。你攞嘅嘢，同清單一樣嗎？", "neutral");
+  } else {
+    onCheckTap(state.cursor);
+  }
+}
+
+function onCheckTapDone(){ /* 直接跳去誠實確認（＝付足錢） */
+  go("declare");
+  say("冇人睇住都要老實。一樣定唔一樣？", "neutral");
+}
+
+/* ============================================================
+   畫面 4：誠實確認 → 畫面 5：結果
+   ============================================================ */
+function judge(){
+  const L = LISTS[state.listIndex];
+  const wanted = L.items;
+  const actual = state.basket;
+  const allMatch = wanted.length === wanted.filter(w=>actual.includes(w)).length
+                   && actual.length === wanted.length;
+  return {
+    allMatch,
+    got: actual.length,
+    want: wanted.length,
+    // 攞漏咗嘅 / 多咗嘅（學生已誠實答覆之後先講，係教學位，唔算洩漏）
+    missing: wanted.filter(w=>!actual.includes(w)),
+    extra:   actual.filter(a=>!wanted.includes(a)),
+  };
+}
+
+/* 講清楚差在邊：漏咗咩、多咗咩 */
+function diffSentence(r){
+  const n = (ids)=> ids.map(i=>ITEMS[i].name).join("、");
+  if(r.missing.length && r.extra.length)
+    return `你攞漏咗 ${n(r.missing)}，但籃度有 ${n(r.extra)}（唔喺清單上面）。我哋一齊換返轉頭。`;
+  if(r.missing.length)
+    return `籃度仲未有 ${n(r.missing)}。我哋一齊擺返轉頭先。`;
+  if(r.extra.length)
+    return `籃度有 ${n(r.extra)}，但清單上面冇。擺返轉頭先。`;
+  return "";
+}
+
+function declare(ans){
+  // ── 雙擊防護 ────────────────────────────────────────────────
+  // 第一次 click 之後即刻鎖死兩個掣。
+  // 冇呢個 guard：結果畫面嘅「下一張清單」(y≈405-501) 同
+  // 誠實確認畫面嘅「唔一樣」(y≈379-475) 垂直重疊，
+  // 學生雙擊「唔一樣」嘅第二次 click 會直接落到「下一張清單」，
+  // 結果訊息（diffSentence + 機器人回饋）被完全跳過。
+  // 雙擊對中度智障學生係常見行為，唔係邊緣個案。
+  if(state.declared) return;
+  state.declared = true;
+  $("#btnSame").disabled = true;
+  $("#btnDiff").disabled = true;
+
+  const r = judge();
+  const truthful = (ans==="same") === r.allMatch;
+
+  state.log.push({
+    第: state.listIndex+1,
+    清單: LISTS[state.listIndex].items.map(i=>ITEMS[i].name).join("、"),
+    攞到: state.basket.map(i=>ITEMS[i].name).join("、"),
+    漏咗: r.missing.map(i=>ITEMS[i].name).join("、") || "—",
+    多咗: r.extra.map(i=>ITEMS[i].name).join("、") || "—",
+    逐項核對: state.checks.length
+      ? state.checks.map(c=>`${ITEMS[c.item].name}:${c.said==="has"?"有":"冇"}${c.right?"✓":"✗"}`).join(" ")
+      : "（略過逐項核對）",
+    誠實答覆: ans==="same" ? "一樣" : "唔一樣",
+    實際: r.allMatch ? "一樣" : "唔一樣",
+    一致: truthful ? "✓ 誠實" : "✗ 有落差"
+  });
+
+  SFX.star();
+  state.stars++;
+  renderStars(true);
+
+  $("#rewardStar").style.display = "block";
+  $("#btnNext").textContent = (state.listIndex >= LISTS.length-1) ? "睇我嘅獎狀 🏅" : "下一張清單";
+
+  paintResult(ans);
+  go("result");
+}
+
+/* 四種結果嘅文案 + 標題顏色，集中喺一處。
+   ────────────────────────────────────────────────────────────
+   ⚠ 誠信紅線：呢四個分支**全部**都係正面回應，
+     標題顏色只准 --ok（綠）或 --ink（中性），
+     **唔准**用 --no（深紅 #8F2D00）。
+
+     Bug 記錄：「多謝你話我知。」呢句明明係正面回應，
+     之前因為被歸類做「答錯嗰個 branch」而派咗 --no，
+     結果標題變成深紅 —— 色系上就係懲罰，
+     直接打倒「星星獎勵肯答、唔獎勵答啱」呢個核心設計。
+     顏色應該跟 sentiment（點感受），唔係跟 branch（行到邊條路）。
+   ──────────────────────────────────────────────────────────── */
+function paintResult(ans){
+  const r = judge();
+  const t = $("#resultTitle"), b = $("#resultBody");
+
+  if(ans==="diff"){
+    if(!r.allMatch){                     // 話唔一樣，實際真係唔一樣 → 最想獎勵嘅行為
+      t.textContent = "多謝你老實講！"; t.style.color = "var(--ok)";
+      b.textContent = diffSentence(r) + " 無人商店就係要咁——付足、講足。";
+      say("多謝你老實講！付足錢就係咁。", "thanks");
+    }else{                              // 話唔一樣，但其實一樣 → 仍然正面
+      t.textContent = "你話唔一樣？"; t.style.color = "var(--ink)";
+      b.textContent = "我再睇多次…… 原來一樣喎。你睇得好細心，我哋再對一次。";
+      say("多謝你咁小心！我哋再對一次。", "happy");
+    }
+  }else{
+    if(r.allMatch){                      // 話一樣，實際一樣
+      t.textContent = "一樣晒，付足啦！"; t.style.color = "var(--ok)";
+      b.textContent = "自己對清楚再講，就係無人商店嘅誠信——付足錢。";
+      say("啱晒！自己對清楚，好似付足錢咁。", "thanks");
+    }else{                              // 話一樣，但實際唔一樣 → 正面，唔講「你講錯」
+      t.textContent = "多謝你講。"; t.style.color = "var(--ok)";
+      b.textContent = "我再睇一次：" + diffSentence(r).replace(/。$/,"") +
+                      "。下次對清楚先，好似付足錢咁。";
+      say("唔緊要。下次對清楚，先好似付足錢。", "happy");
+    }
+  }
+}
+
+/* ============================================================
+   流程
+   ============================================================ */
+/* 誠實確認兩個掣重新上膛（每張單開一次） */
+function armDeclare(){
+  state.declared = false;
+  $("#btnSame").disabled = false;
+  $("#btnDiff").disabled = false;
+}
+
+function startList(){
+  state.basket = []; state.checks = []; state.cursor = 0;
+  armDeclare();
+  $("#rewardStar").style.display = "none";
+  renderBasket(); renderShop(); go("shop");
+}
+
+/* 完整重置 — 「重新開始」同「清除記錄」共用。
+   之前兩個掣各自清一半 state（記錄清了但籃同畫面留住），
+   會出現「進度條話第 1 單、畫面仲係第 3 單個籃」嘅矛盾。 */
+function resetAll(){
+  state.listIndex = 0; state.stars = 0; state.log = [];
+  state.basket = []; state.checks = []; state.cursor = 0;
+  armDeclare();
+  $("#rewardStar").style.display = "none";
+  renderStars(); renderBasket();
+  $("#nameInput").value = "";
+  $("#certName").textContent = "\u00a0";
+  go("cover");
+}
+
+function nextList(){
+  if(state.listIndex >= LISTS.length-1){
+    $("#certStars").textContent = Array.from({length:LISTS.length},()=>"⭐").join(" ");
+    // 空白名一律用 NBSP，同初始 HTML / 輸入框清空時保持一致，
+    // 避免 certName 由「有字寬」變成「完全冇內容」令證狀行距跳動。
+    $("#certName").textContent = $("#nameInput").value.trim() || " ";
+    go("cert"); say("你今日付足、講足，好有誠信！收埋工啦！", "thanks");
+  }else{
+    state.listIndex++;
+    renderDoor(); go("door");
+    say("做咗一單喇，仲有 " + (LISTS.length - state.listIndex) + " 張單。", "happy");
+  }
+}
+
+/* ============================================================
+   老師記錄
+   ============================================================ */
+function teacherText(){
+  const lines = [
+    "無人商店 · 誠信小任務 — 老師記錄",
+    "日期：" + new Date().toLocaleDateString("zh-HK"),
+    "",
+  ];
+  if(!state.log.length){ lines.push("（未有記錄）"); return lines.join("\n"); }
+  state.log.forEach(r=>{
+    lines.push(
+      `第 ${r.第} 單｜清單：${r.清單}`,
+      `  攞到：${r.攞到}`,
+      `  漏咗：${r.漏咗}｜多咗：${r.多咗}`,
+      `  逐項核對：${r.逐項核對}`,
+      `  誠實答覆：${r.誠實答覆}｜實際：${r.實際}｜${r.一致}`,
+      ""
+    );
+  });
+  const off = state.log.filter(r=>r.一致.startsWith("✗")).length;
+  lines.push(`— 共 ${state.log.length} 單；有落差的 ${off} 單 —`);
+  return lines.join("\n");
+}
+function openTeacher(){ $("#teacherOut").textContent = teacherText();
+                        $("#teacherPanel").classList.add("show"); }
+
+/* ============================================================
+   進度唔做持久化
+   ────────────────────────────────────────────────────────────
+   課室會連續畀多個學生用同一個分頁。任何 localStorage /
+   sessionStorage 持久化都會令下一個學生見到上一個學生嘅星星，
+   造成跨學生污染 + 「第 1 單但已有 2 顆星」嘅矛盾畫面。
+   一節課 10-15 分鐘，中途重載嘅代價遠細過污染嘅代價 → 唔存。
+   記錄只留喺記憶體，老師用完即場複製走。
+   ============================================================ */
+
+/* ============================================================
+   事件
+   ============================================================ */
+$("#btnStart").addEventListener("click", ()=>{ SFX.tap(); renderDoor(); go("door");
+  say(`無人商店：攞完要自己對，好似付足錢。今日 ${LISTS.length} 張單！`, "happy"); });
+
+$("#btnHas").addEventListener("click", ()=>answerCheck("has"));
+$("#btnNo").addEventListener("click",  ()=>answerCheck("no"));
+
+$("#btnToCheck").addEventListener("click", ()=>{
+  SFX.tap();
+  state.cursor = 0;
+  // 空籃：直接去誠實確認。呢度一定要喺 renderCheck() 之後判斷，
+  // 否則 go("check") 會覆蓋咗 renderCheck 入面嘅跳轉 → 畫面卡死。
+  if(state.basket.length === 0){
+    say("籃度乜都冇喎。咁你攞嘅嘢，同清單一樣嗎？", "think");
+    go("declare");
+    return;
+  }
+  renderCheck(); go("check");
+});
+
+$("#btnCheckDone").addEventListener("click", ()=>{ SFX.tap(); onCheckTapDone(); });
+
+$("#btnSame").addEventListener("click", ()=>declare("same"));
+$("#btnDiff").addEventListener("click", ()=>declare("diff"));
+
+$("#btnNext").addEventListener("click", ()=>{ SFX.tap(); nextList(); });
+
+$("#nameInput").addEventListener("input", (e)=>{ $("#certName").textContent = e.target.value.trim() || "\u00a0"; });
+
+$("#btnRestart").addEventListener("click", ()=>{
+  resetAll();
+  clearSay(); say("好，我哋由頭再嚟一次。", "happy");
+});
+
+$("#teacherBtn").addEventListener("click", openTeacher);
+$("#btnCloseTeacher").addEventListener("click", ()=>$("#teacherPanel").classList.remove("show"));
+$("#teacherPanel").addEventListener("click", (e)=>{
+  if(e.target === $("#teacherPanel")) $("#teacherPanel").classList.remove("show");
+});
+$("#btnCopy").addEventListener("click", async ()=>{
+  const t = teacherText();
+  const pre = $("#teacherOut");
+  pre.textContent = t;                       // 確保畫面上係最新一份
+  // 主路徑：Clipboard API
+  try{
+    if(!navigator.clipboard || !navigator.clipboard.writeText) throw new Error("no clipboard api");
+    await navigator.clipboard.writeText(t);
+    say("記錄已複製。","happy");
+    return;
+  }catch(e){ /* 落到 fallback */ }
+  // Fallback：Bug 記錄 —— 原本寫住 pre.select?.()，但 <pre> 根本冇 .select()
+  // （只有 <input> / <textarea> 先有），所以呢個「後備方案」其實係空操作，
+  // 老師見到「請手動複製」但啲字根本冇被選中。要自己用 Range 選。
+  let copied = false;
+  try{
+    const sel = window.getSelection(), range = document.createRange();
+    range.selectNodeContents(pre);
+    sel.removeAllRanges(); sel.addRange(range);
+    copied = document.execCommand("copy");
+    sel.removeAllRanges();
+  }catch(e){ /* 連 execCommand 都唔得就認輸 */ }
+  if(copied){ say("記錄已複製。","happy"); }
+  else{
+    say("請用 mouse 撳住下面啲字，⌘A 或者 Ctrl+A 再複製。","think");
+  }
+});
+$("#btnClear").addEventListener("click", ()=>{
+  // 完整重置，唔淨係清 log：否則 stars / listIndex 清咗但籃同畫面留住，
+  // 下一個 go() 會顯示「第 1 單」而畫面仲係第 3 單個籃。
+  resetAll();
+  $("#teacherOut").textContent = "已清除，全部由頭開始。";
+});
+
+document.addEventListener("keydown", (e)=>{
+  if(e.key === "Escape"){ $("#teacherPanel").classList.remove("show"); return; }
+  // ⚠ 輸入框內唔好觸發快捷鍵。
+  //   Bug：證書畫面打「Timothy」「Tony」呢類名時，每撳一個 t
+  //   就會彈出老師面板（position:fixed; inset:0 完全遮住證書），
+  //   而個 t 又照樣入咗個欄 —— 名打歪咗，畫面仲俾個面板擋住。
+  const t = e.target;
+  if(t && t.closest && t.closest("input, textarea, select, [contenteditable]")) return;
+  if(e.key === "t" || e.key === "T"){
+    if(!$("#teacherPanel").classList.contains("show")) openTeacher();
+  }
+});
+
+/* 首次互動先啟動音效（瀏覽器 autoplay policy） */
+document.addEventListener("pointerdown", ()=>{
+  try{ actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+       if(actx.state==="suspended") actx.resume(); }catch(e){}
+}, {once:true});
+
+/* 啟動：每次開頁都係全新一節，唔會帶住上一個學生嘅進度 */
+renderStars(); renderBasket();
+say("你好！呢度係無人商店——攞咗嘢都要付足錢。", "happy");
+go("cover");
+</script>
+</body>
+</html>
