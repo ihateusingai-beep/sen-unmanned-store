@@ -295,6 +295,21 @@ p.hint{font-size:clamp(1rem,2.2vw,1.3rem); color:var(--ink-soft); margin:0; text
 #declareQ{font-size:clamp(1.3rem,3.6vw,2.2rem); font-weight:900; text-align:center;
   max-width:15em; margin:0; line-height:1.3;}
 
+/* 櫃檯付費：三掣必須同大、同色階，唔可以令「比足」事先睇落係答案 */
+#s-pay{gap:16px;}
+#payQ{font-size:clamp(1.3rem,3.6vw,2.1rem); font-weight:900; text-align:center;
+  max-width:16em; margin:0; line-height:1.3;}
+.pay-row{display:flex; gap:14px; flex-wrap:wrap; justify-content:center; width:100%; max-width:920px;}
+.big.pay{
+  min-height:120px; min-width:min(200px,42vw); padding:14px 18px;
+  flex-direction:column; gap:6px;
+  background:var(--card); color:var(--ink);
+  font-size:clamp(1.15rem,2.8vw,1.55rem);
+}
+.big.pay .ico{font-size:1.6em; line-height:1;}
+.big.pay:disabled{opacity:1; cursor:default; transform:none; box-shadow:5px 5px 0 rgba(20,32,43,.14);}
+#s-pay .pay-row .big{flex:1 1 160px;}
+
 /* 結果 */
 #resultCard{padding:26px 32px; max-width:min(760px,94vw); text-align:center;}
 #resultTitle{font-size:clamp(1.6rem,4.4vw,2.6rem); font-weight:900; margin:0 0 10px;}
@@ -449,9 +464,19 @@ p.hint{font-size:clamp(1rem,2.2vw,1.3rem); color:var(--ink-soft); margin:0; text
       </button>
     </section>
 
-    <!-- ── 畫面 4：誠實確認（＝付足錢） ───────────── -->
+    <!-- ── 畫面 4：誠實確認（對貨） ──────────────── -->
     <section class="screen" id="s-declare">
-      <h2 class="screen-h">好似付足錢</h2>
+      <h2 class="screen-h">對清楚未？</h2>
+      <p id="declareQ">你攞嘅嘢，同清單一樣嗎？<br><span style="font-size:.72em;font-weight:700;color:var(--ink-soft);">冇人睇住都要老實講</span></p>
+      <div class="btn-row">
+        <button class="big primary" id="btnSame" type="button"><span class="ico">✅</span> 一樣</button>
+        <button class="big alt" id="btnDiff" type="button"><span class="ico">❌</span> 唔一樣</button>
+      </div>
+    </section>
+
+    <!-- ── 畫面 5：櫃檯付費（誠信主關） ─────────── -->
+    <section class="screen" id="s-pay">
+      <h2 class="screen-h">無人店櫃檯</h2>
       <div id="payBridge" aria-hidden="true">
         <div class="pb-step">
           <span class="pb-ico">🛒</span>
@@ -463,14 +488,15 @@ p.hint{font-size:clamp(1rem,2.2vw,1.3rem); color:var(--ink-soft); margin:0; text
           <span class="pb-lab">付足</span>
         </div>
       </div>
-      <p id="declareQ">你攞嘅嘢，同清單一樣嗎？<br><span style="font-size:.72em;font-weight:700;color:var(--ink-soft);">冇人睇住都要老實講</span></p>
-      <div class="btn-row">
-        <button class="big primary" id="btnSame" type="button"><span class="ico">✅</span> 一樣</button>
-        <button class="big alt" id="btnDiff" type="button"><span class="ico">❌</span> 唔一樣</button>
+      <p id="payQ">你會點做？<br><span style="font-size:.72em;font-weight:700;color:var(--ink-soft);">冇人睇住都要自己付足</span></p>
+      <div class="pay-row" role="group" aria-label="付費選擇">
+        <button class="big pay" id="btnPayFull" type="button"><span class="ico">💰</span>比足錢</button>
+        <button class="big pay" id="btnPayLess" type="button"><span class="ico">🪙</span>比少錢</button>
+        <button class="big pay" id="btnPayNone" type="button"><span class="ico">🚶</span>唔比錢</button>
       </div>
     </section>
 
-    <!-- ── 畫面 5：結果 ───────────────────────────── -->
+    <!-- ── 畫面 6：結果 ───────────────────────────── -->
     <section class="screen" id="s-result">
       <div class="card" id="resultCard">
         <h2 id="resultTitle"></h2>
@@ -480,7 +506,7 @@ p.hint{font-size:clamp(1rem,2.2vw,1.3rem); color:var(--ink-soft); margin:0; text
       <button class="big primary" id="btnNext" type="button">下一張清單</button>
     </section>
 
-    <!-- ── 畫面 6：證書 ───────────────────────────── -->
+    <!-- ── 畫面 7：證書 ───────────────────────────── -->
     <section class="screen" id="s-cert">
       <div id="cert">
         <p class="c-sub" style="margin-bottom:4px;">誠信價值觀學習週</p>
@@ -606,9 +632,12 @@ const state = {
   basket    : [],
   checks    : [],   // {item, said:'has'|'no', right:bool}
   cursor    : 0,    // 核對到第幾件
-  stars     : 0,
+  stars     : 0,    // 只獎「比足錢」
   log       : [],   // 每張單一筆
-  declared  : false, // 本單係咪已經交咗誠實答覆（雙擊鎖用，每單重置）
+  declared  : false, // 本單已答「一樣／唔一樣」
+  declareAns: null,  // 'same' | 'diff'
+  paid      : false, // 本單已揀付費
+  payChoice : null,  // 'full' | 'less' | 'none'
 };
 
 const $  = (s)=>document.querySelector(s);
@@ -738,7 +767,8 @@ function go(stage){
   $$(".screen").forEach(s=>s.classList.remove("active"));
   const map = {
     cover:"#s-cover", door:"#s-door", shop:"#s-shop",
-    check:"#s-check", declare:"#s-declare", result:"#s-result", cert:"#s-cert",
+    check:"#s-check", declare:"#s-declare", pay:"#s-pay",
+    result:"#s-result", cert:"#s-cert",
   };
   $(map[stage]).classList.add("active");
   lockInput();
@@ -974,123 +1004,139 @@ function judge(){
   };
 }
 
-/* 講清楚差在邊：漏咗咩、多咗咩 */
+/* 講清楚差在邊：漏咗咩、多咗咩（結果畫面先講；唔暗示可以即刻改籃） */
 function diffSentence(r){
   const n = (ids)=> ids.map(i=>ITEMS[i].name).join("、");
   if(r.missing.length && r.extra.length)
-    return `你攞漏咗 ${n(r.missing)}，但籃度有 ${n(r.extra)}（唔喺清單上面）。我哋一齊換返轉頭。`;
+    return `貨：漏咗 ${n(r.missing)}，多咗 ${n(r.extra)}（唔喺清單）。下次對清楚先。`;
   if(r.missing.length)
-    return `籃度仲未有 ${n(r.missing)}。我哋一齊擺返轉頭先。`;
+    return `貨：仲未有 ${n(r.missing)}。下次對清楚先。`;
   if(r.extra.length)
-    return `籃度有 ${n(r.extra)}，但清單上面冇。擺返轉頭先。`;
-  return "";
+    return `貨：多咗 ${n(r.extra)}（清單上面冇）。下次對清楚先。`;
+  return "貨：同清單一樣。";
 }
 
 function declare(ans){
-  // ── 雙擊防護 ────────────────────────────────────────────────
-  // 第一次 click 之後即刻鎖死兩個掣。
-  // 冇呢個 guard：結果畫面嘅「下一張清單」(y≈405-501) 同
-  // 誠實確認畫面嘅「唔一樣」(y≈379-475) 垂直重疊，
-  // 學生雙擊「唔一樣」嘅第二次 click 會直接落到「下一張清單」，
-  // 結果訊息（diffSentence + 機器人回饋）被完全跳過。
-  // 雙擊對中度智障學生係常見行為，唔係邊緣個案。
+  // 雙擊防護：鎖死一樣／唔一樣，之後去櫃檯（未出結果、未派星）
   if(state.declared) return;
   state.declared = true;
+  state.declareAns = ans;
   $("#btnSame").disabled = true;
   $("#btnDiff").disabled = true;
+  SFX.tap();
+  go("pay");
+  say("到櫃檯啦。冇人睇住，你會點做？", "neutral");
+}
+
+const PAY_LABEL = { full:"比足錢", less:"比少錢", none:"唔比錢" };
+
+function pay(choice){
+  // 雙擊防護：三掣任一撳完即鎖，避免跳過結果
+  if(state.paid) return;
+  state.paid = true;
+  state.payChoice = choice;
+  ["#btnPayFull","#btnPayLess","#btnPayNone"].forEach(s=>{ $(s).disabled = true; });
 
   const r = judge();
-  const truthful = (ans==="same") === r.allMatch;
+  const truthful = (state.declareAns==="same") === r.allMatch;
+  const paidFull = choice === "full";
 
   state.log.push({
     第: state.listIndex+1,
     清單: LISTS[state.listIndex].items.map(i=>ITEMS[i].name).join("、"),
-    攞到: state.basket.map(i=>ITEMS[i].name).join("、"),
+    攞到: state.basket.map(i=>ITEMS[i].name).join("、") || "（空籃）",
     漏咗: r.missing.map(i=>ITEMS[i].name).join("、") || "—",
     多咗: r.extra.map(i=>ITEMS[i].name).join("、") || "—",
     逐項核對: state.checks.length
       ? state.checks.map(c=>`${ITEMS[c.item].name}:${c.said==="has"?"有":"冇"}${c.right?"✓":"✗"}`).join(" ")
       : "（略過逐項核對）",
-    誠實答覆: ans==="same" ? "一樣" : "唔一樣",
+    誠實答覆: state.declareAns==="same" ? "一樣" : "唔一樣",
     實際: r.allMatch ? "一樣" : "唔一樣",
-    一致: truthful ? "✓ 誠實" : "✗ 有落差"
+    一致: truthful ? "✓ 對貨誠實" : "✗ 對貨有落差",
+    付費: PAY_LABEL[choice] || choice,
+    付足: paidFull ? "✓ 付足" : "✗ 未付足",
   });
 
-  SFX.star();
-  state.stars++;
-  renderStars(true);
+  // 星只獎「比足錢」——亂撳比少／唔比唔會有星
+  if(paidFull){
+    SFX.star();
+    state.stars++;
+    renderStars(true);
+    $("#rewardStar").style.display = "block";
+  }else{
+    SFX.soft();
+    $("#rewardStar").style.display = "none";
+  }
 
-  $("#rewardStar").style.display = "block";
   $("#btnNext").textContent = (state.listIndex >= LISTS.length-1) ? "睇我嘅獎狀 🏅" : "下一張清單";
-
-  paintResult(ans);
+  paintResult();
   go("result");
 }
 
-/* 四種結果嘅文案 + 標題顏色，集中喺一處。
-   ────────────────────────────────────────────────────────────
-   ⚠ 誠信紅線：呢四個分支**全部**都係正面回應，
-     標題顏色只准 --ok（綠）或 --ink（中性），
-     **唔准**用 --no（深紅 #8F2D00）。
-
-     Bug 記錄：「多謝你話我知。」呢句明明係正面回應，
-     之前因為被歸類做「答錯嗰個 branch」而派咗 --no，
-     結果標題變成深紅 —— 色系上就係懲罰，
-     直接打倒「星星獎勵肯答、唔獎勵答啱」呢個核心設計。
-     顏色應該跟 sentiment（點感受），唔係跟 branch（行到邊條路）。
-   ──────────────────────────────────────────────────────────── */
-function paintResult(ans){
+/* 結果文案：標題跟「付費」主線；正文 = 貨（短）+ 錢（主）。
+   ⚠ 顏色只准 --ok 或 --ink，唔准 --no 深紅懲罰色。 */
+function paintResult(){
   const r = judge();
+  const ans = state.declareAns;
+  const choice = state.payChoice;
   const t = $("#resultTitle"), b = $("#resultBody");
 
-  if(ans==="diff"){
-    if(!r.allMatch){                     // 話唔一樣，實際真係唔一樣 → 最想獎勵嘅行為
-      t.textContent = "多謝你老實講！"; t.style.color = "var(--ok)";
-      b.textContent = diffSentence(r) + " 無人商店就係要咁——付足、講足。";
-      say("多謝你老實講！付足錢就係咁。", "thanks");
-    }else{                              // 話唔一樣，但其實一樣 → 仍然正面
-      t.textContent = "你話唔一樣？"; t.style.color = "var(--ink)";
-      b.textContent = "我再睇多次…… 原來一樣喎。你睇得好細心，我哋再對一次。";
-      say("多謝你咁小心！我哋再對一次。", "happy");
-    }
+  // —— 貨：短述（對貨誠實仍讚，但唔再冒充「已經付足」）——
+  let goods = "";
+  if(ans==="diff" && !r.allMatch){
+    goods = "你老實講貨唔一樣。" + diffSentence(r);
+  }else if(ans==="diff" && r.allMatch){
+    goods = "你話貨唔一樣；我再睇，原來一樣。你好小心。";
+  }else if(ans==="same" && r.allMatch){
+    goods = "貨對清楚，一樣晒。";
   }else{
-    if(r.allMatch){                      // 話一樣，實際一樣
-      t.textContent = "一樣晒，付足啦！"; t.style.color = "var(--ok)";
-      b.textContent = "自己對清楚再講，就係無人商店嘅誠信——付足錢。";
-      say("啱晒！自己對清楚，好似付足錢咁。", "thanks");
-    }else{                              // 話一樣，但實際唔一樣 → 正面，唔講「你講錯」
-      t.textContent = "多謝你講。"; t.style.color = "var(--ok)";
-      b.textContent = "我再睇一次：" + diffSentence(r).replace(/。$/,"") +
-                      "。下次對清楚先，好似付足錢咁。";
-      say("唔緊要。下次對清楚，先好似付足錢。", "happy");
-    }
+    goods = "你話貨一樣；我再睇：" + diffSentence(r).replace(/^貨：/,"");
+  }
+
+  // —— 錢：誠信主關 ——
+  if(choice==="full"){
+    t.textContent = "多謝你付足！"; t.style.color = "var(--ok)";
+    b.textContent = goods + " 錢：你比足啦。無人商店就係要咁——付足、講足。";
+    say("多謝你付足！無人店就係要咁。", "thanks");
+  }else if(choice==="less"){
+    t.textContent = "要付足先得"; t.style.color = "var(--ink)";
+    b.textContent = goods + " 錢：比少唔得。無人店要付足先走得。下次揀「比足錢」。";
+    say("唔少得。無人店要付足先走得。", "think");
+  }else{
+    t.textContent = "要畀錢先得"; t.style.color = "var(--ink)";
+    b.textContent = goods + " 錢：唔比錢唔得。自己攞嘅，自己付足。下次揀「比足錢」。";
+    say("要畀錢先得。自己攞嘅，自己付足。", "think");
   }
 }
 
 /* ============================================================
    流程
    ============================================================ */
-/* 誠實確認兩個掣重新上膛（每張單開一次） */
 function armDeclare(){
   state.declared = false;
+  state.declareAns = null;
   $("#btnSame").disabled = false;
   $("#btnDiff").disabled = false;
+}
+function armPay(){
+  state.paid = false;
+  state.payChoice = null;
+  ["#btnPayFull","#btnPayLess","#btnPayNone"].forEach(s=>{
+    const el = $(s); if(el) el.disabled = false;
+  });
 }
 
 function startList(){
   state.basket = []; state.checks = []; state.cursor = 0;
-  armDeclare();
+  armDeclare(); armPay();
   $("#rewardStar").style.display = "none";
   renderBasket(); renderShop(); go("shop");
 }
 
-/* 完整重置 — 「重新開始」同「清除記錄」共用。
-   之前兩個掣各自清一半 state（記錄清了但籃同畫面留住），
-   會出現「進度條話第 1 單、畫面仲係第 3 單個籃」嘅矛盾。 */
 function resetAll(){
   state.listIndex = 0; state.stars = 0; state.log = [];
   state.basket = []; state.checks = []; state.cursor = 0;
-  armDeclare();
+  armDeclare(); armPay();
   $("#rewardStar").style.display = "none";
   renderStars(); renderBasket();
   $("#nameInput").value = "";
@@ -1100,11 +1146,20 @@ function resetAll(){
 
 function nextList(){
   if(state.listIndex >= LISTS.length-1){
-    $("#certStars").textContent = Array.from({length:LISTS.length},()=>"⭐").join(" ");
-    // 空白名一律用 NBSP，同初始 HTML / 輸入框清空時保持一致，
-    // 避免 certName 由「有字寬」變成「完全冇內容」令證狀行距跳動。
+    // 證狀星星：顯示「付足」次數（最多 LISTS.length）
+    const n = Math.min(state.stars, LISTS.length);
+    $("#certStars").textContent = n
+      ? Array.from({length:n},()=>"⭐").join(" ")
+      : "（今次未有付足星）";
     $("#certName").textContent = $("#nameInput").value.trim() || " ";
-    go("cert"); say("你今日付足、講足，好有誠信！收埋工啦！", "thanks");
+    go("cert");
+    if(state.stars >= LISTS.length){
+      say("你今日每次都付足，好有誠信！收埋工啦！", "thanks");
+    }else if(state.stars > 0){
+      say(`你今日付足咗 ${state.stars} 次。記得：無人店要付足！`, "happy");
+    }else{
+      say("記得呀：無人店要付足錢。我哋下次再試。", "think");
+    }
   }else{
     state.listIndex++;
     renderDoor(); go("door");
@@ -1119,6 +1174,7 @@ function teacherText(){
   const lines = [
     "無人商店 · 誠信小任務 — 老師記錄",
     "日期：" + new Date().toLocaleDateString("zh-HK"),
+    "星 = 比足錢次數（對貨誠實另欄）",
     "",
   ];
   if(!state.log.length){ lines.push("（未有記錄）"); return lines.join("\n"); }
@@ -1128,12 +1184,15 @@ function teacherText(){
       `  攞到：${r.攞到}`,
       `  漏咗：${r.漏咗}｜多咗：${r.多咗}`,
       `  逐項核對：${r.逐項核對}`,
-      `  誠實答覆：${r.誠實答覆}｜實際：${r.實際}｜${r.一致}`,
+      `  對貨：答「${r.誠實答覆}」｜實際「${r.實際}」｜${r.一致}`,
+      `  付費：${r.付費}｜${r.付足}`,
       ""
     );
   });
-  const off = state.log.filter(r=>r.一致.startsWith("✗")).length;
-  lines.push(`— 共 ${state.log.length} 單；有落差的 ${off} 單 —`);
+  const offGoods = state.log.filter(r=>r.一致.startsWith("✗")).length;
+  const offPay = state.log.filter(r=>r.付足 && r.付足.startsWith("✗")).length;
+  const fullPay = state.log.filter(r=>r.付足 && r.付足.startsWith("✓")).length;
+  lines.push(`— 共 ${state.log.length} 單；對貨有落差 ${offGoods}；付足 ${fullPay}；未付足 ${offPay} —`);
   return lines.join("\n");
 }
 function openTeacher(){ $("#teacherOut").textContent = teacherText();
@@ -1153,7 +1212,7 @@ function openTeacher(){ $("#teacherOut").textContent = teacherText();
    事件
    ============================================================ */
 $("#btnStart").addEventListener("click", ()=>{ SFX.tap(); renderDoor(); go("door");
-  say(`無人商店：攞完要自己對，好似付足錢。今日 ${LISTS.length} 張單！`, "happy"); });
+  say(`無人商店：攞完要自己對，再付足錢。今日 ${LISTS.length} 張單！`, "happy"); });
 
 $("#btnHas").addEventListener("click", ()=>answerCheck("has"));
 $("#btnNo").addEventListener("click",  ()=>answerCheck("no"));
@@ -1161,8 +1220,6 @@ $("#btnNo").addEventListener("click",  ()=>answerCheck("no"));
 $("#btnToCheck").addEventListener("click", ()=>{
   SFX.tap();
   state.cursor = 0;
-  // 空籃：直接去誠實確認。呢度一定要喺 renderCheck() 之後判斷，
-  // 否則 go("check") 會覆蓋咗 renderCheck 入面嘅跳轉 → 畫面卡死。
   if(state.basket.length === 0){
     say("籃度乜都冇喎。咁你攞嘅嘢，同清單一樣嗎？", "think");
     go("declare");
@@ -1175,6 +1232,10 @@ $("#btnCheckDone").addEventListener("click", ()=>{ SFX.tap(); onCheckTapDone(); 
 
 $("#btnSame").addEventListener("click", ()=>declare("same"));
 $("#btnDiff").addEventListener("click", ()=>declare("diff"));
+
+$("#btnPayFull").addEventListener("click", ()=>pay("full"));
+$("#btnPayLess").addEventListener("click", ()=>pay("less"));
+$("#btnPayNone").addEventListener("click", ()=>pay("none"));
 
 $("#btnNext").addEventListener("click", ()=>{ SFX.tap(); nextList(); });
 
